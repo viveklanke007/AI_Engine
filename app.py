@@ -24,6 +24,7 @@ CORS(app)
 
 # Initialize face detection using OpenCV's Haar Cascade
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+logger.info("AI Engine initialized and ready to handle requests.")
 
 @app.route('/', methods=['GET'])
 def index():
