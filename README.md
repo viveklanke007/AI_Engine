@@ -1,143 +1,40 @@
-# AI Engine - Technical Details
+# AI Engine - Face Recognition
 
-## 🔄 **Change from face_recognition to MediaPipe**
+This service provides face detection and recognition capabilities using OpenCV and ORB descriptors.
 
-### Why the Change?
-- **Original Issue**: `face_recognition` requires `dlib`, which needs CMake and C++ compiler on Windows
-- **Solution**: Switched to **MediaPipe** by Google - pure Python, no compilation needed
-- **Benefits**: 
-  - ✅ Easier installation (no CMake)
-  - ✅ Faster inference
-  - ✅ Better mobile support
-  - ✅ More modern (actively maintained by Google)
+## 🚀 Features
+- **Face Detection**: Fast Haar Cascade detection.
+- **Feature Extraction**: ORB descriptors (1024D vectors).
+- **Comparison**: Cosine similarity matching.
+- **Production Ready**: Optimized Docker image, Gunicorn server, and comprehensive logging.
 
-## 🧠 **How MediaPipe Face Recognition Works**
+## 📡 API Endpoints
 
-### Face Detection
-- Uses **BlazeFace** model (Google's lightweight face detector)
-- Detects faces in real-time
-- Returns confidence score (0.0 - 1.0)
-
-### Face Embedding
-- Extracts **468 facial landmarks** (eyes, nose, mouth, face contour)
-- Creates a **1404-dimensional vector** (468 landmarks × 3 coordinates: x, y, z)
-- This vector is the "face embedding" we store in the database
-
-### Face Matching
-- Uses **Cosine Similarity** to compare two embeddings
-- Formula: `similarity = dot(emb1, emb2) / (||emb1|| × ||emb2||)`
-- Threshold: 0.85 (85% similarity = same person)
-
-## 📡 **API Endpoints**
-
-### 1. Health Check
-```http
-GET /health
-```
-**Response**:
-```json
-{
-  "status": "healthy",
-  "service": "ai-engine",
-  "version": "1.0.0",
-  "face_detection": "MediaPipe"
-}
-```
+### 1. Root / Health Check
+- `GET /`: Basic service info.
+- `GET /health`: Detailed status and versioning.
 
 ### 2. Detect Face
-```http
-POST /detect-face
-Content-Type: application/json
-
-{
-  "image": "base64_encoded_image_string"
-}
-```
-**Response**:
-```json
-{
-  "face_detected": true,
-  "confidence": 0.95,
-  "num_faces": 1
-}
-```
+- `POST /detect-face`: Returns if a face is present and its coordinates.
+- **Input**: `{ "image": "base64_string" }`
 
 ### 3. Extract Embedding
-```http
-POST /extract-embedding
-Content-Type: application/json
-
-{
-  "image": "base64_encoded_image_string"
-}
-```
-**Response**:
-```json
-{
-  "success": true,
-  "embedding": [0.123, 0.456, ...],
-  "embedding_size": 1404,
-  "num_landmarks": 468
-}
-```
+- `POST /extract-embedding`: Returns a 1024D feature vector for a detected face.
+- **Input**: `{ "image": "base64_string" }`
 
 ### 4. Compare Faces
-```http
-POST /compare-faces
-Content-Type: application/json
+- `POST /compare-faces`: Compares two embeddings and returns similarity.
+- **Input**: `{ "embedding1": [], "embedding2": [] }`
 
-{
-  "embedding1": [0.123, 0.456, ...],
-  "embedding2": [0.124, 0.455, ...]
-}
-```
-**Response**:
-```json
-{
-  "similarity": 0.92,
-  "match": true,
-  "threshold": 0.85,
-  "confidence": 92.0
-}
-```
+## 🛠️ Deployment on Railway
 
-## 🔬 **Technical Comparison**
+1. **Dockerfile**: The project includes a production-ready `Dockerfile`.
+2. **Environment Variables**:
+   - `PORT`: Set by Railway (default 5001).
+3. **Dependencies**: automatically installed via `requirements.txt`.
 
-| Feature | face_recognition (dlib) | MediaPipe |
-|---------|------------------------|-----------|
-| Installation | ❌ Requires CMake | ✅ Pure Python |
-| Speed | Medium | ✅ Fast |
-| Accuracy | High (99.38%) | High (98.5%) |
-| Embedding Size | 128D | 1404D (468 landmarks × 3) |
-| Model | ResNet | BlazeFace + FaceMesh |
-| Maintenance | Inactive | ✅ Active (Google) |
-| Mobile Support | ❌ No | ✅ Yes |
-
-## 🎯 **Workflow Integration**
-
-### Registration Flow:
-1. Frontend captures 20-30 frames
-2. Each frame sent to `/extract-embedding`
-3. Average all embeddings → single 1404D vector
-4. Store in MongoDB with user ID
-
-### Attendance Flow:
-1. Frontend captures live frame
-2. Send to `/extract-embedding`
-3. Get all stored embeddings from DB
-4. For each stored embedding, call `/compare-faces`
-5. Find best match above threshold
-6. Mark attendance for that user
-
-## 📊 **Performance Metrics**
-
-- **Face Detection**: ~20ms per frame
-- **Embedding Extraction**: ~50ms per frame
-- **Comparison**: ~1ms per pair
-- **Total Attendance Time**: < 500ms (including DB query)
-
-## 🔐 **Security Notes**
-
-- Embeddings are **one-way** (cannot reconstruct face from embedding)
-- No raw images stored (privacy-friendly)
-- Embeddings are normalized vectors (no personal data)
+## 🔬 Technical Details
+- **Face Detection**: OpenCV Haar Cascade (`haarcascade_frontalface_default.xml`).
+- **Embedding**: ORB descriptors flattened and padded/truncated to 1024 dimensions.
+- **Matching Algorithm**: Cosine Similarity.
+- **Threshold**: default 0.60.

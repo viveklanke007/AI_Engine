@@ -7,10 +7,14 @@ import base64
 from io import BytesIO
 from PIL import Image
 import traceback
+import logging
 
-from flask_cors import CORS
-import os
-from dotenv import load_dotenv
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 load_dotenv() # Load environment variables from .env file
 
@@ -20,14 +24,22 @@ CORS(app)
 # Initialize face detection using OpenCV's Haar Cascade
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({
+        "service": "Attendance System AI Engine",
+        "status": "online",
+        "message": "Welcome to the AI Face Recognition Engine API"
+    })
+
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({
         "status": "healthy", 
         "service": "ai-engine",
-        "version": "1.0.2-final-fix",
+        "version": "1.1.0",
         "face_detection": "OpenCV Haar Cascade",
-        "feature_extraction": "ORB-1024-Verified"
+        "feature_extraction": "ORB-1024"
     })
 
 @app.route('/detect-face', methods=['POST'])
@@ -123,8 +135,8 @@ def compare_faces():
         emb1 = force_1024(data['embedding1'])
         emb2 = force_1024(data['embedding2'])
         
-        # Debug Output (Server Console Only)
-        print(f"DEBUG: Vector Shapes - Stored: {emb1.shape}, Live: {emb2.shape}")
+        # Debug Output
+        logger.info(f"Vector Shapes - Stored: {emb1.shape}, Live: {emb2.shape}")
         
         # Critical Alignment Check
         if emb1.shape != emb2.shape:
@@ -149,11 +161,10 @@ def compare_faces():
             "confidence": float(similarity * 100)
         })
     except Exception as e:
-        print(f"Comparison Crash: {traceback.format_exc()}")
+        logger.error(f"Comparison Crash: {traceback.format_exc()}")
         return jsonify({"error": f"AI Comparison Failed: {str(e)}"}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
-    print(f"AI Engine starting on port {port} (Legacy v1.0.2 - FINAL FIX)...")
-    print("Alignment Protocol: ACTIVE")
+    logger.info(f"AI Engine starting on port {port}...")
     app.run(host='0.0.0.0', port=port, debug=False)
