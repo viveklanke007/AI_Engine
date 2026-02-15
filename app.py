@@ -8,6 +8,7 @@ from io import BytesIO
 from PIL import Image
 import traceback
 import logging
+from dotenv import load_dotenv
 
 # Configure logging
 logging.basicConfig(
